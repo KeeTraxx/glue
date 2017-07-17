@@ -16,16 +16,15 @@ import (
 	"github.com/labstack/echo"
 )
 
+// Glue glues an echo.Group together with a *gorm.DB
 func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
-
 	for _, i := range interfaces {
-		fmt.Println("Got", i)
 		entity := reflect.TypeOf(i).Elem()
 		entityName := strings.ToLower(inflection.Plural(entity.Name()))
-		fmt.Printf("Registering %+v\n", entityName)
 		entitySlice := reflect.SliceOf(entity)
 
 		g.GET("/"+entityName, func(c echo.Context) error {
+			fmt.Printf("Registering GET /%v \n", entityName)
 			results := reflect.New(entitySlice).Interface()
 
 			// TODO: Support filtering...
@@ -39,6 +38,7 @@ func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 		})
 
 		g.POST("/"+entityName, func(c echo.Context) error {
+			fmt.Printf("Registering POST /%v \n", entityName)
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
@@ -57,6 +57,7 @@ func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 		})
 
 		g.PUT("/"+entityName+"/:id", func(c echo.Context) error {
+			fmt.Printf("Registering PUT /%v \n", entityName)
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
@@ -84,6 +85,7 @@ func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 		})
 
 		g.PATCH("/"+entityName+"/:id", func(c echo.Context) error {
+			fmt.Printf("Registering PATCH /%v \n", entityName)
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
