@@ -1,4 +1,4 @@
-package restify
+package glue
 
 import (
 	"bytes"
@@ -31,8 +31,8 @@ func beforeTest() (e *echo.Echo) {
 	db.LogMode(true)
 	db.AutoMigrate(&Fruit{})
 
-	r := New(e.Group("/api"), db)
-	r.Register(&Fruit{})
+	Glue(e.Group("/api"), db, &Fruit{})
+
 	return
 }
 

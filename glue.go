@@ -1,4 +1,4 @@
-package restify
+package glue
 
 import (
 	"fmt"
@@ -16,14 +16,8 @@ import (
 	"github.com/labstack/echo"
 )
 
-type (
-	Restify struct {
-		DB    *gorm.DB
-		Group *echo.Group
-	}
-)
+func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 
-func (r *Restify) Register(interfaces ...interface{}) {
 	for _, i := range interfaces {
 		fmt.Println("Got", i)
 		entity := reflect.TypeOf(i).Elem()
@@ -31,11 +25,11 @@ func (r *Restify) Register(interfaces ...interface{}) {
 		fmt.Printf("Registering %+v\n", entityName)
 		entitySlice := reflect.SliceOf(entity)
 
-		r.Group.GET("/"+entityName, func(c echo.Context) error {
+		g.GET("/"+entityName, func(c echo.Context) error {
 			results := reflect.New(entitySlice).Interface()
 
 			// TODO: Support filtering...
-			if err := r.DB.Find(results).Error; err != nil {
+			if err := db.Find(results).Error; err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
@@ -44,7 +38,7 @@ func (r *Restify) Register(interfaces ...interface{}) {
 			return c.JSON(http.StatusOK, results)
 		})
 
-		r.Group.POST("/"+entityName, func(c echo.Context) error {
+		g.POST("/"+entityName, func(c echo.Context) error {
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
@@ -53,7 +47,7 @@ func (r *Restify) Register(interfaces ...interface{}) {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			err = r.DB.Save(v).Error
+			err = db.Save(v).Error
 			if err != nil {
 				fmt.Println(err)
 				return c.NoContent(http.StatusInternalServerError)
@@ -62,7 +56,7 @@ func (r *Restify) Register(interfaces ...interface{}) {
 			return c.JSON(http.StatusOK, v)
 		})
 
-		r.Group.PUT("/"+entityName+"/:id", func(c echo.Context) error {
+		g.PUT("/"+entityName+"/:id", func(c echo.Context) error {
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
@@ -80,7 +74,7 @@ func (r *Restify) Register(interfaces ...interface{}) {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			err = r.DB.Save(v).Error
+			err = db.Save(v).Error
 			if err != nil {
 				fmt.Println(err)
 				return c.NoContent(http.StatusInternalServerError)
@@ -89,7 +83,7 @@ func (r *Restify) Register(interfaces ...interface{}) {
 			return c.JSON(http.StatusOK, v)
 		})
 
-		r.Group.PATCH("/"+entityName+"/:id", func(c echo.Context) error {
+		g.PATCH("/"+entityName+"/:id", func(c echo.Context) error {
 			v := reflect.New(entity).Interface()
 			err := c.Bind(v)
 
@@ -107,18 +101,11 @@ func (r *Restify) Register(interfaces ...interface{}) {
 
 			reflect.ValueOf(v).Elem().FieldByName("ID").SetUint(id)
 
-			r.DB.Model(v).Updates(v)
-			r.DB.Find(v, id)
+			db.Model(v).Updates(v)
+			db.Find(v, id)
 
 			return c.JSON(http.StatusOK, v)
 		})
 	}
-}
-
-func New(g *echo.Group, db *gorm.DB) (r *Restify) {
-	r = &Restify{
-		Group: g,
-		DB:    db,
-	}
-	return
+	return nil
 }
