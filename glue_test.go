@@ -56,6 +56,37 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, "[]", body)
 }
 
+func TestQuery(t *testing.T) {
+	defer cleanup()
+	e := beforeTest()
+	request(POST, "/api/fruits", Apple, e)
+	request(POST, "/api/fruits", Pear, e)
+	code, body := request(GET, "/api/fruits?name=Apple", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[{\"id\":1,\"name\":\"Apple\",\"color\":\"Red\",\"taste\":\"Sweet\"}]", body)
+
+	code, body = request(GET, "/api/fruits?color=Red", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[{\"id\":1,\"name\":\"Apple\",\"color\":\"Red\",\"taste\":\"Sweet\"}]", body)
+
+	code, body = request(GET, "/api/fruits?name-like=pp&color=Red&limit=1", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[{\"id\":1,\"name\":\"Apple\",\"color\":\"Red\",\"taste\":\"Sweet\"}]", body)
+
+	code, body = request(GET, "/api/fruits?offset=1&limit=1", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[{\"id\":2,\"name\":\"Pear\",\"color\":\"Green\",\"taste\":\"Sweet\"}]", body)
+
+	code, body = request(GET, "/api/fruits?name=Pear", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[{\"id\":2,\"name\":\"Pear\",\"color\":\"Green\",\"taste\":\"Sweet\"}]", body)
+
+	code, body = request(GET, "/api/fruits?name=Ananas", nil, e)
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "[]", body)
+
+}
+
 func TestPost(t *testing.T) {
 	defer cleanup()
 	e := beforeTest()

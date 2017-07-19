@@ -21,6 +21,28 @@ type Tester struct {
 	Name string `json:"name"`
 }
 
+func getKeys(data map[string]interface{}) (keys []string) {
+	keys = make([]string, len(data))
+	i := 0
+	for k := range data {
+		keys[i] = k
+		i++
+	}
+	return
+}
+
+func getValues(data map[string]interface{}) (values []interface{}) {
+	values = make([]interface{}, len(data))
+
+	i := 0
+	for _, v := range data {
+		values[i] = v
+		i++
+	}
+
+	return
+}
+
 // Glue glues an echo.Group together with a *gorm.DB
 func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 	for _, i := range interfaces {
@@ -32,8 +54,34 @@ func Glue(g *echo.Group, db *gorm.DB, interfaces ...interface{}) error {
 		g.GET("/"+entityName, func(c echo.Context) error {
 			results := reflect.New(entitySlice).Interface()
 
-			// TODO: Support filtering...
-			if err := db.Find(results).Error; err != nil {
+			query := make(map[string]interface{}, len(c.QueryParams()))
+			likes := make(map[string]interface{}, len(c.QueryParams()))
+			limit := -1
+			offset := -1
+
+			for key, v := range c.QueryParams() {
+				if strings.HasSuffix(key, "-like") {
+					likes[strings.Replace(key, "-like", " LIKE ?", -1)] = "%" + v[0] + "%"
+				} else if key == "limit" {
+					limit, _ = strconv.Atoi(v[0])
+				} else if key == "offset" {
+					offset, _ = strconv.Atoi(v[0])
+				} else {
+					query[key] = v[0]
+				}
+
+			}
+
+			fmt.Printf("query: %+v\n", query)
+			fmt.Printf("likes: %+v\n", likes)
+
+			if err := db.
+				Where(strings.Join(getKeys(likes), " AND "), getValues(likes)...).
+				Where(query).
+				Limit(limit).
+				Offset(offset).
+				Find(results).
+				Error; err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
